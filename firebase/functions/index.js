@@ -4,8 +4,6 @@ const nodemailer = require('nodemailer');
 
 admin.initializeApp();
 
-// Configure email transporter (using Gmail as example)
-// In production, use environment variables for credentials
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -14,9 +12,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Cloud Function to send missed medication email
 exports.sendMissedMedicationEmail = functions.https.onCall(async (data, context) => {
-  // Verify authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -24,16 +20,14 @@ exports.sendMissedMedicationEmail = functions.https.onCall(async (data, context)
   const { userId, medicationName, timeSlot, timestamp } = data;
 
   try {
-    // Get user data
     const userDoc = await admin.firestore().collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'User not found');
     }
 
     const userData = userDoc.data();
-    const caretakerEmail = userData.email; // Since same user acts as both
+    const caretakerEmail = userData.email;
 
-    // Email content
     const timeSlotText = timeSlot ? ` (${timeSlot})` : '';
     const mailOptions = {
       from: functions.config().email?.user || process.env.EMAIL_USER,
@@ -50,7 +44,6 @@ exports.sendMissedMedicationEmail = functions.https.onCall(async (data, context)
 
     await transporter.sendMail(mailOptions);
 
-    // Also save notification to Firestore
     try {
       const notification = {
         userId,
@@ -67,7 +60,6 @@ exports.sendMissedMedicationEmail = functions.https.onCall(async (data, context)
       console.log('✅ Notification saved to Firestore');
     } catch (notificationError) {
       console.error('Error saving notification to Firestore:', notificationError);
-      // Don't fail the email send if notification save fails
     }
 
     return { success: true };
@@ -77,27 +69,23 @@ exports.sendMissedMedicationEmail = functions.https.onCall(async (data, context)
   }
 });
 
-// Scheduled function to check for missed medications (runs every 15 minutes)
-// This checks at specific times: 9:00 AM, 1:30 PM, 5:00 PM, 9:00 PM
 exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').onRun(async (context) => {
   const now = new Date();
   const currentHour = now.getHours();
   const currentMinutes = now.getMinutes();
-  const currentTime = currentHour * 60 + currentMinutes; // Convert to minutes from midnight
+  const currentTime = currentHour * 60 + currentMinutes;
 
-  // Define time slot deadlines (in minutes from midnight)
   const timeSlotDeadlines = {
-    'Morning': 9 * 60,        // 9:00 AM = 540 minutes
-    'Afternoon': 13 * 60 + 30, // 1:30 PM = 810 minutes
-    'Evening': 17 * 60,        // 5:00 PM = 1020 minutes
-    'Night': 21 * 60           // 9:00 PM = 1260 minutes
+    'Morning': 9 * 60,
+    'Afternoon': 13 * 60 + 30,
+    'Evening': 17 * 60,
+    'Night': 21 * 60
   };
 
-  // Only check at specific times (within 15 minutes after deadline)
-  const checkTimes = [540, 810, 1020, 1260]; // 9 AM, 1:30 PM, 5 PM, 9 PM
+  const checkTimes = [540, 810, 1020, 1260];
   const shouldCheck = checkTimes.some(deadline => {
     const timeDiff = currentTime - deadline;
-    return timeDiff >= 0 && timeDiff <= 15; // Check within 15 minutes after deadline
+    return timeDiff >= 0 && timeDiff <= 15;
   });
 
   if (!shouldCheck) {
@@ -112,7 +100,6 @@ exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').o
     today.setHours(0, 0, 0, 0);
     const todayTimestamp = admin.firestore.Timestamp.fromDate(today);
 
-    // Get all medications (not just active ones, since we check timeSlots)
     const medicationsSnapshot = await admin.firestore()
       .collection('medications')
       .get();
@@ -123,10 +110,9 @@ exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').o
       const timeSlots = medication.timeSlots || [];
 
       if (timeSlots.length === 0) {
-        continue; // Skip medications without time slots
+        continue;
       }
 
-      // Get today's logs for this medication
       const logsSnapshot = await admin.firestore()
         .collection('medicationLogs')
         .where('userId', '==', userId)
@@ -134,7 +120,6 @@ exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').o
         .where('date', '==', todayTimestamp)
         .get();
 
-      // Create a set of taken time slots
       const takenTimeSlots = new Set();
       logsSnapshot.forEach(logDoc => {
         const logData = logDoc.data();
@@ -143,20 +128,16 @@ exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').o
         }
       });
 
-      // Check each time slot for this medication
       for (const timeSlot of timeSlots) {
         const deadline = timeSlotDeadlines[timeSlot];
         
         if (deadline === undefined) {
-          continue; // Skip unknown time slots
+          continue;
         }
 
-        // Check if we're past the deadline and medication not taken
         if (currentTime >= deadline && !takenTimeSlots.has(timeSlot)) {
-          // Check if we've already sent a notification for this today
           const notificationKey = `${medication.id}_${timeSlot}_${today.toDateString()}`;
           
-          // Check if notification already exists
           const existingNotifications = await admin.firestore()
             .collection('notifications')
             .where('userId', '==', userId)
@@ -167,14 +148,12 @@ exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').o
             .get();
 
           if (existingNotifications.empty) {
-            // Send notification
             console.log(`📧 Sending notification: Patient didn't take ${medication.name} (${timeSlot})`);
             
             const userDoc = await admin.firestore().collection('users').doc(userId).get();
             if (userDoc.exists) {
               const userData = userDoc.data();
               
-              // Send email
               const timeSlotText = timeSlot ? ` (${timeSlot})` : '';
               const mailOptions = {
                 from: functions.config().email?.user || process.env.EMAIL_USER,
@@ -196,7 +175,6 @@ exports.checkMissedMedications = functions.pubsub.schedule('every 15 minutes').o
                 console.error(`❌ Error sending email:`, emailError);
               }
 
-              // Save notification to Firestore
               try {
                 const notification = {
                   userId,

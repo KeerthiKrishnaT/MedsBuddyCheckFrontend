@@ -15,7 +15,6 @@ import { db } from '../config/firebase';
 
 const NOTIFICATIONS_COLLECTION = 'notifications';
 
-// This will call a Cloud Function to send email notifications
 export const sendMissedMedicationEmail = async (userId, medicationName, timeSlot = null) => {
   try {
     if (!functions) {
@@ -31,7 +30,6 @@ export const sendMissedMedicationEmail = async (userId, medicationName, timeSlot
       timestamp: new Date().toISOString()
     });
 
-    // Also save notification to Firestore
     if (result.data?.success) {
       await saveNotificationToFirestore(userId, medicationName, timeSlot);
     }
@@ -39,7 +37,6 @@ export const sendMissedMedicationEmail = async (userId, medicationName, timeSlot
     return { success: true, error: null };
   } catch (error) {
     console.error('Error sending email:', error);
-    // Still try to save notification even if email fails
     try {
       await saveNotificationToFirestore(userId, medicationName, timeSlot);
     } catch (saveError) {
@@ -49,7 +46,6 @@ export const sendMissedMedicationEmail = async (userId, medicationName, timeSlot
   }
 };
 
-// Save notification to Firestore
 const saveNotificationToFirestore = async (userId, medicationName, timeSlot = null) => {
   try {
     if (!db) {
@@ -65,7 +61,7 @@ const saveNotificationToFirestore = async (userId, medicationName, timeSlot = nu
       message: `Patient didn't take ${medicationName}${timeSlot ? ` (${timeSlot})` : ''}`,
       read: false,
       createdAt: Timestamp.now(),
-      date: Timestamp.fromDate(new Date(new Date().setHours(0, 0, 0, 0))) // Today's date at midnight
+      date: Timestamp.fromDate(new Date(new Date().setHours(0, 0, 0, 0)))
     };
 
     await addDoc(collection(db, NOTIFICATIONS_COLLECTION), notification);
@@ -77,7 +73,6 @@ const saveNotificationToFirestore = async (userId, medicationName, timeSlot = nu
   }
 };
 
-// Get notifications for a user
 export const getNotifications = async (userId, limitCount = 50) => {
   try {
     if (!db) {
@@ -100,7 +95,6 @@ export const getNotifications = async (userId, limitCount = 50) => {
     return { notifications, error: null };
   } catch (error) {
     console.error('Error getting notifications:', error);
-    // Fallback: try without orderBy if index is missing
     try {
       const q = query(
         collection(db, NOTIFICATIONS_COLLECTION),
@@ -116,7 +110,7 @@ export const getNotifications = async (userId, limitCount = 50) => {
         .sort((a, b) => {
           const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
           const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-          return bTime - aTime; // Descending order
+          return bTime - aTime;
         });
 
       return { notifications, error: null };
@@ -126,7 +120,6 @@ export const getNotifications = async (userId, limitCount = 50) => {
   }
 };
 
-// Get unread notification count
 export const getUnreadNotificationCount = async (userId) => {
   try {
     if (!db) {
@@ -147,7 +140,6 @@ export const getUnreadNotificationCount = async (userId) => {
   }
 };
 
-// Mark notification as read
 export const markNotificationAsRead = async (notificationId) => {
   try {
     if (!db) {
@@ -167,7 +159,6 @@ export const markNotificationAsRead = async (notificationId) => {
   }
 };
 
-// Mark all notifications as read
 export const markAllNotificationsAsRead = async (userId) => {
   try {
     if (!db) {
@@ -197,7 +188,6 @@ export const markAllNotificationsAsRead = async (userId) => {
   }
 };
 
-// Subscribe to real-time notifications
 export const subscribeToNotifications = (userId, callback) => {
   if (!db) {
     console.warn('Firestore not initialized. Cannot subscribe to notifications.');
@@ -223,7 +213,6 @@ export const subscribeToNotifications = (userId, callback) => {
       },
       (error) => {
         console.error('Error in notification subscription:', error);
-        // Fallback: try without orderBy
         try {
           const fallbackQ = query(
             collection(db, NOTIFICATIONS_COLLECTION),
@@ -266,7 +255,6 @@ export const subscribeToNotifications = (userId, callback) => {
   }
 };
 
-// Check for missed medications and send notifications
 export const checkMissedMedications = async (userId, medications, scheduledTime) => {
   try {
     const now = new Date();
@@ -274,15 +262,11 @@ export const checkMissedMedications = async (userId, medications, scheduledTime)
     const timeDiff = now - scheduled;
     const hoursDiff = timeDiff / (1000 * 60 * 60);
 
-    // If medication is scheduled and more than 2 hours have passed without marking
     if (hoursDiff > 2) {
       for (const medication of medications) {
-        // Check if medication was marked today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        // This would check the medication logs
-        // For now, we'll trigger the email notification
         await sendMissedMedicationEmail(userId, medication.name);
       }
     }

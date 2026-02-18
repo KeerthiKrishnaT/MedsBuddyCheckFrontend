@@ -27,7 +27,6 @@ export const signUp = async (email, password, name) => {
     });
     
     let errorMessage = error.message;
-    // Provide helpful error messages
     if (error.code === 'auth/operation-not-allowed') {
       errorMessage = 'Email/Password authentication is not enabled. Please enable it in Firebase Console > Authentication > Sign-in method.';
     } else if (error.code === 'auth/weak-password') {
@@ -84,7 +83,6 @@ export const getCurrentUser = () => {
 export const onAuthChange = (callback) => {
   if (!auth) {
     console.warn('Firebase Auth is not initialized. Auth state changes will not work.');
-    // Return a function that does nothing (unsubscribe)
     return () => {};
   }
   return onAuthStateChanged(auth, callback);

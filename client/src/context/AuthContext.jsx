@@ -30,11 +30,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    // If unsubscribe is a function, return it for cleanup
     if (typeof unsubscribe === 'function') {
       return () => unsubscribe();
     }
-    // If auth is not initialized, just set loading to false
     setLoading(false);
   }, []);
 

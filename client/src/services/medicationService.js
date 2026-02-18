@@ -22,7 +22,6 @@ if (!db) {
 const MEDICATIONS_COLLECTION = 'medications';
 const MEDICATION_LOGS_COLLECTION = 'medicationLogs';
 
-// Helper function to add timeout to promises
 const withTimeout = (promise, timeoutMs = 10000) => {
   return Promise.race([
     promise,
@@ -32,15 +31,12 @@ const withTimeout = (promise, timeoutMs = 10000) => {
   ]);
 };
 
-// Test Firestore connection (non-blocking, just for diagnostics)
 const testFirestoreConnection = async () => {
   try {
     if (!db) {
       return { connected: false, error: 'Firestore not initialized' };
     }
     
-    // Try a simple read operation with short timeout
-    // If this times out, it likely means Firestore isn't enabled or rules block everything
     const testQuery = query(collection(db, MEDICATIONS_COLLECTION), limit(1));
     await Promise.race([
       getDocs(testQuery),
@@ -48,7 +44,6 @@ const testFirestoreConnection = async () => {
     ]);
     return { connected: true, error: null };
   } catch (error) {
-    // Check if it's a permission error (rules issue) vs timeout (not enabled/network)
     if (error.message && error.message.includes('permission')) {
       return { connected: true, error: 'Permission denied (rules issue)' };
     }
@@ -56,7 +51,6 @@ const testFirestoreConnection = async () => {
   }
 };
 
-// Add medication (Caretaker function)
 export const addMedication = async (userId, medicationData) => {
   try {
     if (!db) {
@@ -70,37 +64,33 @@ export const addMedication = async (userId, medicationData) => {
       return { id: null, error: 'User ID is required' };
     }
 
-    // Quick diagnostic check
     console.log('Testing Firestore connection...');
     const connectionTest = await testFirestoreConnection();
     if (!connectionTest.connected) {
       console.warn('⚠️ Firestore connection test failed:', connectionTest.error);
       
-      // If it's a timeout, Firestore is likely not enabled
       if (connectionTest.error && connectionTest.error.includes('timeout')) {
         console.error('❌ Firestore appears to be disabled or not responding.');
         console.error('📖 See ENABLE_FIRESTORE.md for step-by-step instructions to enable Firestore.');
         console.error('💡 You can also run window.testFirestore() in the browser console for detailed diagnostics.');
       }
-      // Still try to write - might work if it's just a read permission issue
     } else {
       console.log('✅ Firestore connection test passed');
     }
 
     const medication = {
       ...medicationData,
-      userId, // Both patient and caretaker use same userId
+      userId,
       createdAt: Timestamp.now(),
       isActive: true
     };
 
     console.log('Adding medication to Firestore:', { userId, medicationData: medication });
     
-    // Add timeout to prevent hanging (reduced to 8 seconds since we tested connection)
     const startTime = Date.now();
     const docRef = await withTimeout(
       addDoc(collection(db, MEDICATIONS_COLLECTION), medication),
-      8000 // 8 second timeout
+      8000
     );
     const duration = Date.now() - startTime;
     console.log(`Medication added successfully with ID: ${docRef.id} (took ${duration}ms)`);
@@ -110,7 +100,6 @@ export const addMedication = async (userId, medicationData) => {
     console.error('Error in addMedication:', error);
     const errorMessage = error.message || 'Failed to add medication';
     
-    // Provide more specific error messages
     if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
       return { 
         id: null, 
@@ -144,7 +133,6 @@ export const addMedication = async (userId, medicationData) => {
   }
 };
 
-// Get all medications for a user
 export const getMedications = async (userId) => {
   try {
     if (!db) {
@@ -157,7 +145,6 @@ export const getMedications = async (userId) => {
     
     console.log('Fetching medications for userId:', userId);
     
-    // Try with orderBy first, fallback to without if index is missing
     let querySnapshot;
     try {
       const q = query(
@@ -168,7 +155,6 @@ export const getMedications = async (userId) => {
       );
       querySnapshot = await withTimeout(getDocs(q), 8000);
     } catch (orderByError) {
-      // If orderBy fails (likely missing index), try without it
       console.warn('orderBy failed, trying without it:', orderByError.message);
       const q = query(
         collection(db, MEDICATIONS_COLLECTION),
@@ -185,16 +171,14 @@ export const getMedications = async (userId) => {
       medications.push({ 
         id: doc.id, 
         ...data,
-        // Ensure timeSlots is an array
         timeSlots: Array.isArray(data.timeSlots) ? data.timeSlots : (data.timeSlots ? [data.timeSlots] : ['Morning'])
       });
     });
     
-    // Sort manually if orderBy failed
     medications.sort((a, b) => {
       const aTime = a.createdAt?.toMillis?.() || a.createdAt?.seconds * 1000 || 0;
       const bTime = b.createdAt?.toMillis?.() || b.createdAt?.seconds * 1000 || 0;
-      return bTime - aTime; // Descending order
+      return bTime - aTime;
     });
     
     console.log(`Found ${medications.length} medications:`, medications.map(m => ({ id: m.id, name: m.name, timeSlots: m.timeSlots })));
@@ -205,7 +189,6 @@ export const getMedications = async (userId) => {
   }
 };
 
-// Get single medication
 export const getMedication = async (medicationId) => {
   try {
     const docRef = doc(db, MEDICATIONS_COLLECTION, medicationId);
@@ -219,7 +202,6 @@ export const getMedication = async (medicationId) => {
   }
 };
 
-// Update medication
 export const updateMedication = async (medicationId, updates) => {
   try {
     const docRef = doc(db, MEDICATIONS_COLLECTION, medicationId);
@@ -233,7 +215,6 @@ export const updateMedication = async (medicationId, updates) => {
   }
 };
 
-// Delete medication (soft delete)
 export const deleteMedication = async (medicationId) => {
   try {
     const docRef = doc(db, MEDICATIONS_COLLECTION, medicationId);
@@ -244,7 +225,6 @@ export const deleteMedication = async (medicationId) => {
   }
 };
 
-// Unmark medication as taken (delete the medication log)
 export const unmarkMedicationAsTaken = async (userId, medicationId, timeSlot) => {
   try {
     if (!db) {
@@ -261,7 +241,6 @@ export const unmarkMedicationAsTaken = async (userId, medicationId, timeSlot) =>
     today.setHours(0, 0, 0, 0);
     const todayTimestamp = Timestamp.fromDate(today);
 
-    // Find the log entry for today
     const q = query(
       collection(db, MEDICATION_LOGS_COLLECTION),
       where('userId', '==', userId),
@@ -273,7 +252,6 @@ export const unmarkMedicationAsTaken = async (userId, medicationId, timeSlot) =>
     const existingLogs = await withTimeout(getDocs(q), 8000);
 
     if (!existingLogs.empty) {
-      // Delete the log entry
       const logDoc = existingLogs.docs[0];
       console.log('🗑️ Deleting medication log:', logDoc.id);
       
@@ -303,7 +281,6 @@ export const unmarkMedicationAsTaken = async (userId, medicationId, timeSlot) =>
   }
 };
 
-// Mark medication as taken (Patient/Caretaker function) - with time slot support
 export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proofPhotoUrl = null, markedBy = 'patient') => {
   try {
     if (!db) {
@@ -320,7 +297,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
     today.setHours(0, 0, 0, 0);
     const todayTimestamp = Timestamp.fromDate(today);
 
-    // Check if already marked for this time slot today
     const q = query(
       collection(db, MEDICATION_LOGS_COLLECTION),
       where('userId', '==', userId),
@@ -333,7 +309,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
     const existingLogs = await withTimeout(getDocs(q), 8000);
 
     if (!existingLogs.empty) {
-      // Update existing log
       const logDoc = existingLogs.docs[0];
       console.log('📝 Updating existing log:', logDoc.id);
       
@@ -348,7 +323,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
         8000
       );
       
-      // Verify the write succeeded by reading it back
       console.log('✅ Update completed, verifying...');
       const verifyDoc = await getDoc(doc(db, MEDICATION_LOGS_COLLECTION, logDoc.id));
       if (verifyDoc.exists() && verifyDoc.data().status === 'taken') {
@@ -359,7 +333,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
         return { id: logDoc.id, error: 'Failed to verify medication was marked as taken' };
       }
     } else {
-      // Create new log
       console.log('📝 Creating new log entry...');
       const logData = {
         userId,
@@ -380,7 +353,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
       
       console.log('✅ New log created with ID:', docRef.id);
       
-      // Verify the write succeeded by reading it back
       console.log('✅ Creation completed, verifying...');
       const verifyDoc = await getDoc(doc(db, MEDICATION_LOGS_COLLECTION, docRef.id));
       if (verifyDoc.exists() && verifyDoc.data().status === 'taken') {
@@ -395,7 +367,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
     console.error('❌ Error in markMedicationAsTaken:', error);
     const errorMessage = error.message || 'Failed to mark medication as taken';
     
-    // Provide more specific error messages
     if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
       return { id: null, error: 'Request timed out. Please check your internet connection and try again.' };
     }
@@ -407,7 +378,6 @@ export const markMedicationAsTaken = async (userId, medicationId, timeSlot, proo
   }
 };
 
-// Get medication logs for a date range (optimized with limit for better performance)
 export const getMedicationLogs = async (userId, startDate, endDate, limitCount = null) => {
   try {
     const startTimestamp = Timestamp.fromDate(startDate);
@@ -416,7 +386,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
     let querySnapshot;
     let logs = [];
     
-    // Try with orderBy first, fallback to without if index is missing
     try {
       let q = query(
         collection(db, MEDICATION_LOGS_COLLECTION),
@@ -426,7 +395,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
         orderBy('date', 'desc')
       );
       
-      // Add limit if specified (for performance optimization)
       if (limitCount) {
         q = query(q, limit(limitCount));
       }
@@ -436,8 +404,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
         logs.push({ id: doc.id, ...doc.data() });
       });
     } catch (orderByError) {
-      // If orderBy fails (likely missing index), try without it
-      // This is expected if index doesn't exist - not really an error
       console.log('ℹ️ orderBy requires index. Trying query without orderBy...');
       try {
         let q = query(
@@ -447,7 +413,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
           where('date', '<=', endTimestamp)
         );
         
-        // Add limit if specified
         if (limitCount) {
           q = query(q, limit(limitCount));
         }
@@ -457,8 +422,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
           logs.push({ id: doc.id, ...doc.data() });
         });
       } catch (dateRangeError) {
-        // If date range query also fails (missing composite index), query all user logs and filter in memory
-        // This is a valid fallback - no need to show as error, just info
         console.log('ℹ️ Date range query requires index. Using fallback: querying all logs and filtering in memory.');
         try {
           let q = query(
@@ -466,8 +429,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
             where('userId', '==', userId)
           );
           
-          // For today's logs, we don't need a huge limit - get reasonable amount
-          // For monthly stats, we might need more, so increase limit if specified
           const queryLimit = limitCount ? (limitCount > 100 ? limitCount * 2 : 200) : null;
           if (queryLimit) {
             q = query(q, limit(queryLimit));
@@ -475,13 +436,11 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
           
           querySnapshot = await getDocs(q);
           
-          // Filter by date range in memory
           querySnapshot.forEach((doc) => {
             const logData = { id: doc.id, ...doc.data() };
             const logDate = logData.date;
             
             if (logDate) {
-              // Handle both Timestamp objects and plain objects
               let logTimestamp;
               if (logDate.toMillis) {
                 logTimestamp = logDate.toMillis();
@@ -490,14 +449,12 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
               } else if (logDate instanceof Date) {
                 logTimestamp = logDate.getTime();
               } else {
-                // Skip if we can't parse the date
                 return;
               }
               
               const startTime = startTimestamp.toMillis();
               const endTime = endTimestamp.toMillis();
               
-              // Include logs within the date range (inclusive)
               if (logTimestamp >= startTime && logTimestamp <= endTime) {
                 logs.push(logData);
               }
@@ -512,14 +469,12 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
       }
     }
     
-    // Sort manually (always sort since orderBy might have failed)
     logs.sort((a, b) => {
       const aTime = a.date?.toMillis?.() || a.date?.seconds * 1000 || 0;
       const bTime = b.date?.toMillis?.() || b.date?.seconds * 1000 || 0;
-      return bTime - aTime; // Descending order
+      return bTime - aTime;
     });
     
-    // Apply limit after filtering (if we did in-memory filtering)
     if (limitCount && logs.length > limitCount) {
       logs = logs.slice(0, limitCount);
     }
@@ -531,7 +486,6 @@ export const getMedicationLogs = async (userId, startDate, endDate, limitCount =
   }
 };
 
-// Get today's medication status with time slot support (optimized - accepts medications to avoid duplicate fetch)
 export const getTodayMedicationStatus = async (userId, medications = null) => {
   try {
     const today = new Date();
@@ -540,7 +494,6 @@ export const getTodayMedicationStatus = async (userId, medications = null) => {
     
     console.log('📅 Getting today status for date:', today.toISOString(), 'timestamp:', todayTimestamp.toDate().toISOString());
 
-    // Get medications if not provided
     let meds = medications;
     if (!meds) {
       const result = await getMedications(userId);
@@ -549,7 +502,6 @@ export const getTodayMedicationStatus = async (userId, medications = null) => {
 
     console.log('💊 Processing', meds.length, 'medications');
 
-    // Get today's logs
     const { logs, error: logsError } = await getMedicationLogs(userId, today, today);
     
     if (logsError) {
@@ -566,7 +518,6 @@ export const getTodayMedicationStatus = async (userId, medications = null) => {
       date: log.date?.toDate ? log.date.toDate().toISOString() : 'N/A'
     })));
 
-    // Create a map of medication logs by medicationId and timeSlot
     const logMap = {};
     logs.forEach(log => {
       const key = `${log.medicationId}_${log.timeSlot || 'default'}`;
@@ -578,10 +529,9 @@ export const getTodayMedicationStatus = async (userId, medications = null) => {
 
     console.log('🗺️ Log map keys:', Object.keys(logMap));
 
-    // Process medications with their time slots
     const todayStatus = [];
     meds.forEach(med => {
-      const timeSlots = med.timeSlots || ['Morning']; // Default to Morning if no time slots
+      const timeSlots = med.timeSlots || ['Morning'];
       
       timeSlots.forEach(timeSlot => {
         const key = `${med.id}_${timeSlot}`;
@@ -617,7 +567,6 @@ export const getTodayMedicationStatus = async (userId, medications = null) => {
   }
 };
 
-// Check if medication needs reminder (not taken within time slot window) - optimized to accept todayStatus
 export const checkMedicationReminders = async (userId, todayStatus = null) => {
   try {
     let status = todayStatus;
@@ -629,14 +578,13 @@ export const checkMedicationReminders = async (userId, todayStatus = null) => {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    const currentTime = currentHour * 60 + currentMinutes; // Convert to minutes for easier comparison
+    const currentTime = currentHour * 60 + currentMinutes;
     
-    // Define time slot deadlines (in minutes from midnight)
     const timeSlotDeadlines = {
-      'Morning': 9 * 60,        // 9:00 AM = 540 minutes
-      'Afternoon': 13 * 60 + 30, // 1:30 PM = 810 minutes
-      'Evening': 17 * 60,        // 5:00 PM = 1020 minutes
-      'Night': 21 * 60           // 9:00 PM = 1260 minutes
+      'Morning': 9 * 60,
+      'Afternoon': 13 * 60 + 30,
+      'Evening': 17 * 60,
+      'Night': 21 * 60
     };
 
     const reminders = [];
@@ -645,7 +593,6 @@ export const checkMedicationReminders = async (userId, todayStatus = null) => {
       if (item.status === 'pending') {
         const deadline = timeSlotDeadlines[item.timeSlot];
         if (deadline !== undefined) {
-          // Check if we're past the deadline
           if (currentTime >= deadline) {
             reminders.push({
               medication: item.medication,
@@ -664,7 +611,6 @@ export const checkMedicationReminders = async (userId, todayStatus = null) => {
   }
 };
 
-// Check for missed medications and send reminders to caretaker based on time deadlines
 export const checkMissedMedicationsForCaretaker = async (userId, todayStatus = null) => {
   try {
     let status = todayStatus;
@@ -676,14 +622,13 @@ export const checkMissedMedicationsForCaretaker = async (userId, todayStatus = n
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
-    const currentTime = currentHour * 60 + currentMinutes; // Convert to minutes
+    const currentTime = currentHour * 60 + currentMinutes;
     
-    // Define time slot deadlines (in minutes from midnight)
     const timeSlotDeadlines = {
-      'Morning': 9 * 60,        // 9:00 AM = 540 minutes
-      'Afternoon': 13 * 60 + 30, // 1:30 PM = 810 minutes
-      'Evening': 17 * 60,        // 5:00 PM = 1020 minutes
-      'Night': 21 * 60           // 9:00 PM = 1260 minutes
+      'Morning': 9 * 60,
+      'Afternoon': 13 * 60 + 30,
+      'Evening': 17 * 60,
+      'Night': 21 * 60
     };
 
     const missedMedications = [];
@@ -692,7 +637,6 @@ export const checkMissedMedicationsForCaretaker = async (userId, todayStatus = n
       if (item.status === 'pending') {
         const deadline = timeSlotDeadlines[item.timeSlot];
         if (deadline !== undefined) {
-          // Check if we're past the deadline
           if (currentTime >= deadline) {
             missedMedications.push({
               medication: item.medication,
@@ -710,32 +654,27 @@ export const checkMissedMedicationsForCaretaker = async (userId, todayStatus = n
   }
 };
 
-// Get adherence statistics (optimized - accepts medications to avoid duplicate fetch)
 export const getAdherenceStats = async (userId, month, year, medications = null) => {
   try {
     const startDate = new Date(year, month, 1);
     const endDate = new Date(year, month + 1, 0);
     endDate.setHours(23, 59, 59, 999);
 
-    // Get medications if not provided
     let meds = medications;
     if (!meds) {
       const result = await getMedications(userId);
       meds = result.medications;
     }
     
-    // Limit logs query to improve performance (only need taken/missed counts)
-    const { logs } = await getMedicationLogs(userId, startDate, endDate, 500); // Limit to 500 logs max
+    const { logs } = await getMedicationLogs(userId, startDate, endDate, 500);
 
     const totalDays = endDate.getDate();
     const takenCount = logs.filter(log => log.status === 'taken').length;
     const missedCount = logs.filter(log => log.status === 'missed').length;
 
-    // Calculate streak (optimized - only check recent logs)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Only check logs from the last 30 days for streak calculation
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
@@ -778,12 +717,10 @@ export const getAdherenceStats = async (userId, month, year, medications = null)
   }
 };
 
-// Subscribe to real-time updates for today's medication logs
-// Returns an unsubscribe function
 export const subscribeToTodayMedicationLogs = (userId, callback) => {
   if (!db) {
     console.error('Firestore is not initialized');
-    return () => {}; // Return no-op unsubscribe function
+    return () => {};
   }
 
   try {
@@ -794,9 +731,6 @@ export const subscribeToTodayMedicationLogs = (userId, callback) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowTimestamp = Timestamp.fromDate(tomorrow);
 
-    // Query for today's medication logs
-    // Use userId-only query and filter in memory to avoid index requirement
-    // This ensures the real-time listener works even without composite indexes
     const q = query(
       collection(db, MEDICATION_LOGS_COLLECTION),
       where('userId', '==', userId)
@@ -804,7 +738,6 @@ export const subscribeToTodayMedicationLogs = (userId, callback) => {
 
     console.log('👂 Setting up real-time listener for medication logs (with in-memory date filtering)...');
     
-    // Set up real-time listener
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -812,7 +745,6 @@ export const subscribeToTodayMedicationLogs = (userId, callback) => {
         snapshot.forEach((doc) => {
           const logData = { id: doc.id, ...doc.data() };
           
-          // Filter by date range in memory (today only)
           const logDate = logData.date;
           if (logDate) {
             let logTimestamp;
@@ -821,13 +753,12 @@ export const subscribeToTodayMedicationLogs = (userId, callback) => {
             } else if (logDate.seconds) {
               logTimestamp = logDate.seconds * 1000;
             } else {
-              return; // Skip if we can't parse the date
+              return;
             }
             
             const startTime = todayTimestamp.toMillis();
             const endTime = tomorrowTimestamp.toMillis();
             
-            // Only include logs within today's date range
             if (logTimestamp >= startTime && logTimestamp < endTime) {
               logs.push(logData);
             }
@@ -844,7 +775,6 @@ export const subscribeToTodayMedicationLogs = (userId, callback) => {
           })));
         }
         
-        // Call the callback with the updated logs
         callback({ logs, error: null });
       },
       (error) => {
@@ -856,7 +786,7 @@ export const subscribeToTodayMedicationLogs = (userId, callback) => {
     return unsubscribe;
   } catch (error) {
     console.error('❌ Error setting up real-time listener:', error);
-    return () => {}; // Return no-op unsubscribe function
+    return () => {};
   }
 };
 

@@ -28,7 +28,6 @@ const PatientDashboard = () => {
   useEffect(() => {
     if (user) {
       loadData();
-      // Check for reminders every 10 minutes (reduced frequency for better performance)
       const reminderInterval = setInterval(() => {
         if (todayStatus.length > 0) {
           checkReminders();
@@ -39,25 +38,21 @@ const PatientDashboard = () => {
     }
   }, [user]);
 
-  // Refresh data when navigating to this page (e.g., from caretaker view)
   useEffect(() => {
     if (user && location.pathname === '/patient-dashboard') {
       loadData();
     }
   }, [location.pathname, user]);
 
-  // Refresh data when component becomes visible (e.g., when navigating from caretaker view)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        // Refresh data when page becomes visible (user switched tabs or came back)
         loadData();
       }
     };
 
     const handleFocus = () => {
       if (user) {
-        // Refresh data when window regains focus
         loadData();
       }
     };
@@ -71,23 +66,19 @@ const PatientDashboard = () => {
     };
   }, [user]);
 
-  // Check for missed medications and send reminders to caretaker at specific times
   useEffect(() => {
     if (!user || todayStatus.length === 0) {
       return;
     }
 
-    // Function to check and send caretaker reminders
     const checkCaretakerReminders = async () => {
       try {
         const { missedMedications } = await checkMissedMedicationsForCaretaker(user.uid, todayStatus);
         
         if (missedMedications.length > 0) {
-          // Send reminder for each missed medication (only once per day)
           for (const missed of missedMedications) {
             const reminderKey = `${missed.medication.id}_${missed.timeSlot}_${new Date().toDateString()}`;
             
-            // Only send if we haven't sent this reminder today
             if (!caretakerRemindersSent.has(reminderKey)) {
               console.log(`📧 Sending caretaker reminder: Patient didn't take ${missed.medication.name} (${missed.timeSlot})`);
               
@@ -112,19 +103,16 @@ const PatientDashboard = () => {
       }
     };
 
-    // Check immediately
     checkCaretakerReminders();
 
-    // Set up scheduled checks at specific times
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
     
-    // Schedule checks at: 9:00 AM, 1:30 PM, 5:00 PM, 9:00 PM
     const checkTimes = [
-      { hour: 9, minute: 0, name: 'Morning' },      // 9:00 AM
-      { hour: 13, minute: 30, name: 'Afternoon' },   // 1:30 PM
-      { hour: 17, minute: 0, name: 'Evening' },      // 5:00 PM
-      { hour: 21, minute: 0, name: 'Night' }         // 9:00 PM
+      { hour: 9, minute: 0, name: 'Morning' },
+      { hour: 13, minute: 30, name: 'Afternoon' },
+      { hour: 17, minute: 0, name: 'Evening' },
+      { hour: 21, minute: 0, name: 'Night' }
     ];
 
     const timeouts = [];
@@ -133,12 +121,10 @@ const PatientDashboard = () => {
       const targetTime = hour * 60 + minute;
       let delay = targetTime - currentTime;
       
-      // If time has passed today, schedule for tomorrow
       if (delay < 0) {
-        delay += 24 * 60; // Add 24 hours
+        delay += 24 * 60;
       }
       
-      // Convert to milliseconds
       const delayMs = delay * 60 * 1000;
       
       console.log(`⏰ Scheduling caretaker reminder check for ${name} in ${Math.round(delayMs / 60000)} minutes`);
@@ -147,26 +133,22 @@ const PatientDashboard = () => {
         console.log(`⏰ Checking ${name} medications at ${hour}:${minute.toString().padStart(2, '0')}`);
         checkCaretakerReminders();
         
-        // Set up recurring daily check
         const dailyInterval = setInterval(() => {
           checkCaretakerReminders();
-        }, 24 * 60 * 60 * 1000); // Every 24 hours
+        }, 24 * 60 * 60 * 1000);
         
-        // Store interval for cleanup
         timeouts.push(dailyInterval);
       }, delayMs);
       
       timeouts.push(timeout);
     });
 
-    // Also check every 5 minutes as a backup (in case the page is open)
     const backupInterval = setInterval(() => {
       checkCaretakerReminders();
-    }, 5 * 60 * 1000); // Every 5 minutes
+    }, 5 * 60 * 1000);
     
     timeouts.push(backupInterval);
 
-    // Cleanup
     return () => {
       timeouts.forEach(timeout => {
         if (typeof timeout === 'number') {
@@ -178,7 +160,6 @@ const PatientDashboard = () => {
     };
   }, [user, todayStatus, caretakerRemindersSent]);
 
-  // Reset caretaker reminders sent at midnight (new day)
   useEffect(() => {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -193,11 +174,10 @@ const PatientDashboard = () => {
       console.log('🔄 Resetting caretaker reminders for new day');
       setCaretakerRemindersSent(new Set());
       
-      // Set up daily reset
       dailyResetInterval = setInterval(() => {
         console.log('🔄 Daily reset: Clearing caretaker reminders');
         setCaretakerRemindersSent(new Set());
-      }, 24 * 60 * 60 * 1000); // Every 24 hours
+      }, 24 * 60 * 60 * 1000);
     }, msUntilMidnight);
     
     return () => {
@@ -210,11 +190,9 @@ const PatientDashboard = () => {
 
   useEffect(() => {
     if (user && todayStatus.length > 0) {
-      // Debounce reminder check - only check after status is loaded
-      // Use a longer delay to prevent multiple rapid calls
       const timeoutId = setTimeout(() => {
         checkReminders(todayStatus);
-      }, 1500); // Increased to 1.5 seconds to prevent rapid duplicate calls
+      }, 1500);
       return () => clearTimeout(timeoutId);
     }
   }, [todayStatus]);
@@ -225,7 +203,6 @@ const PatientDashboard = () => {
       
       console.log('Loading medications for user:', user.uid);
       
-      // Show medications immediately if available (optimistic update)
       const medsResult = await getMedications(user.uid);
       
       if (medsResult.error) {
@@ -240,7 +217,6 @@ const PatientDashboard = () => {
       console.log('Medications loaded:', medsResult.medications.length, medsResult.medications);
       setMedications(medsResult.medications);
       
-      // If no medications, clear status and return early
       if (medsResult.medications.length === 0) {
         console.log('No medications found');
         setTodayStatus([]);
@@ -248,7 +224,6 @@ const PatientDashboard = () => {
         return;
       }
       
-      // Fetch status first (most important for user)
       console.log('Loading today\'s medication status...');
       const statusResult = await getTodayMedicationStatus(user.uid, medsResult.medications);
       if (statusResult.error) {
@@ -258,57 +233,44 @@ const PatientDashboard = () => {
       } else {
         console.log('Today status loaded:', statusResult.todayStatus.length, 'items');
         
-        // Merge with existing status to preserve medications that were just marked as taken
-        // This prevents the UI from reverting to 'pending' if Firestore hasn't updated yet
         setTodayStatus(prev => {
           const newStatus = statusResult.todayStatus;
           
-          // Create a map of existing status by medicationId + timeSlot
           const existingStatusMap = {};
           prev.forEach(item => {
             const key = `${item.medication.id}_${item.timeSlot}`;
-            // Only preserve if status is 'taken' AND it has a logId (was successfully written)
-            // This ensures we only preserve statuses that were actually saved to Firestore
             if (item.status === 'taken' && item.logId) {
               existingStatusMap[key] = item;
             }
           });
           
-          // Merge: use new status, but preserve 'taken' status from existing if it exists
           const mergedStatus = newStatus.map(item => {
             const key = `${item.medication.id}_${item.timeSlot}`;
             const existing = existingStatusMap[key];
             
-            // If existing status is 'taken' with a logId and new status is 'pending', 
-            // check if the new status actually has a log (might be a timing issue)
             if (existing && existing.status === 'taken' && existing.logId) {
               if (item.status === 'pending' && !item.logId) {
-                // Firestore hasn't updated yet, preserve the 'taken' status
                 console.log('🔄 Preserving taken status for:', item.medication.name, item.timeSlot, '(logId:', existing.logId, ')');
-                return existing; // Keep the existing 'taken' status
+                return existing;
               } else if (item.status === 'taken' && item.logId) {
-                // Both are 'taken', use the new one (it's from Firestore)
                 console.log('✅ Using Firestore status for:', item.medication.name, item.timeSlot);
                 return item;
               }
             }
             
-            return item; // Use new status
+            return item;
           });
           
           return mergedStatus;
         });
         
-        // Only check reminders if not skipped (skip when we just marked something as taken)
         if (!skipReminderCheck) {
-          // Check reminders with the new status
           setTimeout(() => {
             checkReminders(statusResult.todayStatus);
           }, 100);
         }
       }
       
-      // Then fetch stats in background (less critical, can load slower)
       getAdherenceStats(user.uid, currentMonth.getMonth(), currentMonth.getFullYear(), medsResult.medications)
         .then(statsResult => {
           if (!statsResult.error) {
@@ -319,7 +281,6 @@ const PatientDashboard = () => {
           console.error('Failed to load stats:', error);
         });
 
-      // Load calendar status for the current month
       loadCalendarStatus(medsResult.medications);
     } catch (error) {
       console.error('Load data error:', error);
@@ -333,18 +294,14 @@ const PatientDashboard = () => {
 
   const checkReminders = async (statusToCheck = null) => {
     try {
-      // Use provided status or current state
       const statusForCheck = statusToCheck || todayStatus;
       
-      // Only check reminders for items that are still pending
       const { reminders: reminderList } = await checkMedicationReminders(user.uid, statusForCheck);
       
-      // Filter out reminders for medications that are already taken
       const activeReminders = reminderList.filter(reminder => {
         const statusItem = statusForCheck.find(
           item => item.medication.id === reminder.medication.id && item.timeSlot === reminder.timeSlot
         );
-        // Only include if status is still pending
         const isPending = statusItem && statusItem.status === 'pending';
         if (!isPending && statusItem) {
           console.log('🚫 Filtering out reminder for taken medication:', reminder.medication.name, reminder.timeSlot);
@@ -353,37 +310,27 @@ const PatientDashboard = () => {
       });
       
       console.log('📋 Setting reminders:', activeReminders.length, 'active reminders out of', reminderList.length, 'total');
-      // Always update to ensure UI reflects current state
       setReminders(activeReminders);
 
-      // Show reminder notifications for new reminders (only once per reminder)
-      // Check current reminders state to avoid showing duplicates
       activeReminders.forEach(reminder => {
         const reminderKey = `${reminder.medication.id}_${reminder.timeSlot}`;
         
-        // Only show toast if we haven't shown it before
-        // The toastId will prevent React Toastify from showing duplicates
         if (!reminderShown[reminderKey]) {
           console.log('🔔 Showing reminder toast for:', reminder.medication.name, reminder.timeSlot);
           
-          // Dismiss any existing toast with the same ID first (if any)
           toast.dismiss(reminderKey);
           
-          // Show the reminder toast with a unique ID
-          // React Toastify will automatically replace any existing toast with the same ID
           toast.warning(
             `Reminder: ${reminder.medication.name} (${reminder.timeSlot}) - Please take your medication!`,
             { 
-              autoClose: 6000, // Reduced to 6 seconds
-              toastId: reminderKey, // Use unique ID - React Toastify will prevent duplicates
+              autoClose: 6000,
+              toastId: reminderKey,
               position: 'top-right'
             }
           );
           
-          // Mark as shown immediately to prevent duplicate toasts
           setReminderShown(prev => ({ ...prev, [reminderKey]: true }));
 
-          // If reminder shown and still not taken after 1 hour, send email to caretaker
           setTimeout(async () => {
             const { todayStatus: currentStatus } = await getTodayMedicationStatus(user.uid);
             const stillPending = currentStatus.find(
@@ -414,7 +361,6 @@ const PatientDashboard = () => {
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // In production, upload to Firebase Storage and get URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setProofPhoto(reader.result);
@@ -427,19 +373,16 @@ const PatientDashboard = () => {
   const markAsTaken = async (medicationId, timeSlot) => {
     const reminderKey = `${medicationId}_${timeSlot}`;
     
-    // Prevent double-clicks
     if (markingInProgress[reminderKey]) {
       console.log('⏭️ Already marking, skipping...');
       return;
     }
     
-    // Set loading state
     setMarkingInProgress(prev => ({ ...prev, [reminderKey]: true }));
     
     try {
       console.log('🔄 Marking medication as taken:', medicationId, timeSlot);
       
-      // Upload proof photo to Firebase Storage if provided
       let photoUrl = null;
       if (proofPhoto) {
         console.log('📤 Uploading proof photo...');
@@ -459,10 +402,8 @@ const PatientDashboard = () => {
         console.error('❌ Error marking medication:', error);
         toast.error(`Failed to mark medication: ${error}`, { autoClose: 5000 });
         
-        // Revert optimistic update on error
         setTodayStatus(prev => prev.map(item => {
           if (item.medication.id === medicationId && item.timeSlot === timeSlot && item.status === 'taken' && !item.logId) {
-            // Revert to pending if we optimistically updated but the write failed
             return {
               ...item,
               status: 'pending',
@@ -486,7 +427,6 @@ const PatientDashboard = () => {
         console.error('❌ No log ID returned - write may have failed');
         toast.error('Failed to mark medication: No confirmation received from server', { autoClose: 5000 });
         
-        // Revert optimistic update
         setTodayStatus(prev => prev.map(item => {
           if (item.medication.id === medicationId && item.timeSlot === timeSlot && item.status === 'taken' && !item.logId) {
             return {
@@ -512,14 +452,12 @@ const PatientDashboard = () => {
       toast.success(`Medication marked as taken for ${timeSlot}!`, { autoClose: 3000 });
       setProofPhoto(null);
       
-      // Immediately remove reminder from reminderShown state
       setReminderShown(prev => {
         const updated = { ...prev };
         delete updated[reminderKey];
         return updated;
       });
       
-      // Remove from reminders list immediately - CRITICAL: do this FIRST
       setReminders(prev => {
         const filtered = prev.filter(
           reminder => !(reminder.medication.id === medicationId && reminder.timeSlot === timeSlot)
@@ -528,8 +466,6 @@ const PatientDashboard = () => {
         return filtered;
       });
       
-      // Immediately update the status in todayStatus to show "Completed" button
-      // Only update if we have a valid log ID (write succeeded)
       setTodayStatus(prev => {
         const updated = prev.map(item => {
           if (item.medication.id === medicationId && item.timeSlot === timeSlot) {
@@ -537,17 +473,15 @@ const PatientDashboard = () => {
             return {
               ...item,
               status: 'taken',
-              takenAt: { toDate: () => new Date() }, // Temporary until reload
+              takenAt: { toDate: () => new Date() },
               markedBy: 'patient',
-              logId: id, // Store the log ID - this is critical for persistence
-              proofPhotoUrl: photoUrl // Store the photo URL
+              logId: id,
+              proofPhotoUrl: photoUrl
             };
           }
           return item;
         });
         
-        // Immediately check reminders with updated status to ensure it stays removed
-        // Use setTimeout to ensure state updates are processed first
         setTimeout(() => {
           console.log('✅ Rechecking reminders with updated status');
           checkReminders(updated);
@@ -556,25 +490,20 @@ const PatientDashboard = () => {
         return updated;
       });
       
-      // Clear loading state
       setMarkingInProgress(prev => {
         const updated = { ...prev };
         delete updated[reminderKey];
         return updated;
       });
       
-      // Reload data after a longer delay to ensure Firestore has updated and propagated
-      // (we already updated UI optimistically, so this is just to sync)
       setTimeout(() => {
         console.log('🔄 Reloading data to sync with Firestore...');
-        loadData(true); // Pass true to skip reminder check
-        // Also reload calendar status to update today's color
+        loadData(true);
         if (medications.length > 0) {
           loadCalendarStatus(medications);
         }
-      }, 2000); // Increased delay to 2 seconds to ensure Firestore has updated and propagated
+      }, 2000);
       
-      // Clear caretaker reminder flag if medication was taken (so it can be sent again if missed later)
       const caretakerReminderKey = `${medicationId}_${timeSlot}_${new Date().toDateString()}`;
       setCaretakerRemindersSent(prev => {
         const updated = new Set(prev);
@@ -585,7 +514,6 @@ const PatientDashboard = () => {
       console.error('❌ Exception in markAsTaken:', error);
       toast.error(`Failed to mark medication as taken: ${error.message || error}`);
       
-      // Clear loading state on error
       setMarkingInProgress(prev => {
         const updated = { ...prev };
         delete updated[reminderKey];
@@ -597,18 +525,15 @@ const PatientDashboard = () => {
   const unmarkAsTaken = async (medicationId, timeSlot) => {
     const unmarkKey = `${medicationId}_${timeSlot}`;
     
-    // Prevent double-clicks
     if (unmarkingInProgress[unmarkKey]) {
       console.log('⏭️ Already unmarking, skipping...');
       return;
     }
     
-    // Confirm with user
     if (!window.confirm('Are you sure you want to unmark this medication? This will remove the record that you took it.')) {
       return;
     }
     
-    // Set loading state
     setUnmarkingInProgress(prev => ({ ...prev, [unmarkKey]: true }));
     
     try {
@@ -630,7 +555,6 @@ const PatientDashboard = () => {
       console.log('✅ Medication unmarked successfully');
       toast.success(`Medication unmarked for ${timeSlot}!`, { autoClose: 3000 });
       
-      // Immediately update the status in todayStatus to show "Mark Taken" button
       setTodayStatus(prev => prev.map(item => {
         if (item.medication.id === medicationId && item.timeSlot === timeSlot) {
           console.log('✅ Updating status to pending for:', item.medication.name, timeSlot);
@@ -645,18 +569,15 @@ const PatientDashboard = () => {
         return item;
       }));
       
-      // Clear loading state
       setUnmarkingInProgress(prev => {
         const updated = { ...prev };
         delete updated[unmarkKey];
         return updated;
       });
       
-      // Reload data after a delay to ensure Firestore has updated
       setTimeout(() => {
         console.log('🔄 Reloading data to sync with Firestore...');
-        loadData(true); // Pass true to skip reminder check
-        // Also reload calendar status to update today's color
+        loadData(true);
         if (medications.length > 0) {
           loadCalendarStatus(medications);
         }
@@ -665,7 +586,6 @@ const PatientDashboard = () => {
       console.error('❌ Exception in unmarkAsTaken:', error);
       toast.error(`Failed to unmark medication: ${error.message || error}`);
       
-      // Clear loading state on error
       setUnmarkingInProgress(prev => {
         const updated = { ...prev };
         delete updated[unmarkKey];
@@ -681,7 +601,6 @@ const PatientDashboard = () => {
     return 'Good Evening';
   };
 
-  // Load calendar status for the current month
   const loadCalendarStatus = async (medications) => {
     if (!user || !medications || medications.length === 0) {
       return;
@@ -694,15 +613,12 @@ const PatientDashboard = () => {
       const endDate = new Date(year, month + 1, 0);
       endDate.setHours(23, 59, 59, 999);
 
-      // Get all logs for the month
       const { logs } = await getMedicationLogs(user.uid, startDate, endDate);
 
-      // Calculate expected medications per day (all time slots for all medications)
       const expectedPerDay = medications.reduce((total, med) => {
         return total + (med.timeSlots?.length || 1);
       }, 0);
 
-      // Group logs by date
       const logsByDate = {};
       logs.forEach(log => {
         if (log.status === 'taken') {

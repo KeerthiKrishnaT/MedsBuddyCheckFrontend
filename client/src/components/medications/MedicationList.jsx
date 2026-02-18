@@ -47,13 +47,11 @@ const MedicationList = () => {
       return; // Prevent double submission
     }
 
-    // Validate user is logged in
     if (!user || !user.uid) {
       toast.error('Please log in to add medications');
       return;
     }
 
-    // Validate required fields
     if (!formData.name || !formData.name.trim()) {
       toast.error('Please enter medication name');
       return;
@@ -94,7 +92,6 @@ const MedicationList = () => {
       if (error) {
         console.error('Error adding medication:', error);
         
-        // Provide specific guidance based on error type
         let errorMsg = error;
         if (error.includes('Connection test timeout') || error.includes('Cannot connect to Firestore')) {
           errorMsg = 'Firestore connection failed. This usually means:\n\n' +
@@ -127,7 +124,6 @@ const MedicationList = () => {
 
       console.log('Medication added successfully with ID:', id);
       
-      // Optimistically update UI - add medication to list immediately
       const newMedication = {
         id,
         ...formData,
@@ -137,7 +133,6 @@ const MedicationList = () => {
       };
       setMedications(prev => [newMedication, ...prev]);
       
-      // Reset form immediately
       setShowAddForm(false);
       setFormData({ 
         name: '', 
@@ -148,10 +143,8 @@ const MedicationList = () => {
         notes: ''
       });
       
-      // Reload medications in background (non-blocking) to ensure sync
       loadMedications().catch(err => {
         console.error('Background reload failed:', err);
-        // Don't show error to user since we already updated UI optimistically
       });
       
       toast.success('Medication added successfully');
@@ -159,7 +152,6 @@ const MedicationList = () => {
       console.error('Exception in handleSubmit:', error);
       const errorMessage = error.message || error.toString();
       
-      // Provide user-friendly error messages
       let userMessage = '';
       if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
         userMessage = 'Request timed out. This usually means:\n• Firestore security rules are blocking writes\n• Internet connection is slow\n• Firebase project is not properly configured\n\nPlease check FIREBASE_SECURITY_RULES.md for help.';

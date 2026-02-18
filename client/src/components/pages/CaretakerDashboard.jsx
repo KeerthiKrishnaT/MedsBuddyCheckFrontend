@@ -32,14 +32,12 @@ const CaretakerDashboard = () => {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhoto, setCurrentPhoto] = useState(null);
 
-  // Initial load
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
   }, [user]);
 
-  // Refresh data when navigating to this page (e.g., from patient view)
   useEffect(() => {
     if (user && location.pathname === '/caretaker-dashboard') {
       console.log('🔄 Refreshing caretaker dashboard data...');
@@ -47,11 +45,9 @@ const CaretakerDashboard = () => {
     }
   }, [location.pathname, user]);
 
-  // Refresh data when component becomes visible (e.g., when navigating from patient view)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        // Refresh data when page becomes visible (user switched tabs or came back)
         console.log('🔄 Page visible, refreshing data...');
         loadDashboardData();
       }
@@ -59,7 +55,6 @@ const CaretakerDashboard = () => {
 
     const handleFocus = () => {
       if (user) {
-        // Refresh data when window regains focus
         console.log('🔄 Window focused, refreshing data...');
         loadDashboardData();
       }
@@ -74,11 +69,10 @@ const CaretakerDashboard = () => {
     };
   }, [user]);
 
-  // Real-time listener for medication logs - automatically updates when patient marks medications
   useEffect(() => {
     if (!user || !medications.length) {
       console.log('⏳ Waiting for medications to load before setting up real-time listener...');
-      return; // Wait until medications are loaded
+      return;
     }
 
     console.log('👂 Setting up real-time listener for medication updates...', {
@@ -86,15 +80,13 @@ const CaretakerDashboard = () => {
       medicationCount: medications.length
     });
     
-    let previousStatus = null; // Track previous status to detect changes
+    let previousStatus = null;
     
-    // Set up real-time listener for today's medication logs
     let unsubscribe;
     try {
       unsubscribe = subscribeToTodayMedicationLogs(user.uid, ({ logs, error }) => {
         if (error) {
           console.error('❌ Real-time listener error:', error);
-          // Fallback: manually refresh data
           console.log('🔄 Falling back to manual refresh due to listener error...');
           loadDashboardData(true);
           return;
@@ -110,9 +102,7 @@ const CaretakerDashboard = () => {
           date: log.date?.toDate ? log.date.toDate().toISOString() : 'N/A'
         })));
         
-        // Update today's status based on the real-time logs
         if (logs.length > 0 || medications.length > 0) {
-          // Recalculate today's status with the new logs
           console.log('🔄 Recalculating status with', logs.length, 'logs and', medications.length, 'medications...');
           getTodayMedicationStatus(user.uid, medications)
             .then(statusResult => {
