@@ -1,0 +1,100 @@
+.drug-interaction-checker {
+  padding: 20px 0;
+}
+
+.search-results {
+  margin-top: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: white;
+}
+
+.search-result-item {
+  padding: 12px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s ease;
+}
+
+.search-result-item:hover {
+  background: #f8f9ff;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.selected-medications {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.medication-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.medication-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.remove-btn {
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+
+.remove-btn:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.interaction-result {
+  padding: 20px;
+  margin: 15px 0;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.interaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.interaction-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.interaction-result ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.interaction-result li {
+  margin: 5px 0;
+}
+

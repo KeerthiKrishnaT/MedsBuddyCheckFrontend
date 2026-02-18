@@ -1,0 +1,412 @@
+.caretaker-dashboard {
+  padding: 0;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+/* Header */
+.dashboard-header {
+  background: white;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logo-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.view-label {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.btn-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.btn-switch:hover {
+  transform: translateY(-2px);
+}
+
+/* Patient Selector */
+.patient-selector {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.patient-selector label {
+  font-weight: 600;
+  color: #333;
+}
+
+.patient-selector .form-control {
+  max-width: 300px;
+}
+
+/* Dashboard Banner */
+.dashboard-banner {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.banner-icon {
+  font-size: 3rem;
+  opacity: 0.9;
+}
+
+.banner-text h2 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.banner-text p {
+  margin: 5px 0 0;
+  opacity: 0.9;
+  font-size: 1.1rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+}
+
+.metric-card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.metric-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+  padding: 0 20px;
+  display: flex;
+  gap: 10px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.tab:hover {
+  color: #667eea;
+}
+
+.tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+/* Overview Content */
+.overview-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.card-icon {
+  font-size: 1.5rem;
+  color: #667eea;
+}
+
+/* Today's Status */
+.status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.status-info {
+  flex: 1;
+}
+
+.status-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.status-time {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-badge.taken {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-badge.missed {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.action-btn:hover {
+  background: #f0f0f0;
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.action-btn svg {
+  font-size: 1.2rem;
+}
+
+/* Monthly Progress */
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.progress-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.subtitle {
+  margin: 5px 0 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.progress-percentage {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.progress-bar-container {
+  margin-top: 20px;
+}
+
+.progress-bar {
+  display: flex;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e0e0e0;
+}
+
+.progress-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: width 0.3s ease;
+}
+
+.progress-segment.taken {
+  background: #3b82f6;
+  color: white;
+}
+
+.progress-segment.missed {
+  background: #ef4444;
+  color: white;
+}
+
+.progress-segment.remaining {
+  background: #e5e7eb;
+  color: #666;
+}
+
+.segment-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  color: #667eea;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px 20px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .nav-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Medications collection
+    match /medications/{medicationId} {
+      // Users can only read/write their own medications
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Medication logs collection
+    match /medicationLogs/{logId} {
+      // Users can only read/write their own medication logs
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // Users collection (optional, for storing user profile data)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read/write their own notifications
+      // For queries, Firestore validates each document returned matches the rule
+      // So we check if the document's userId matches the authenticated user's ID
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Allow write if userId matches auth.uid
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Allow create if userId in new data matches auth.uid
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}
+

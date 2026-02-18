@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Proof photos - users can only upload/read their own photos
+    match /proof-photos/{userId}/{allPaths=**} {
+      // Allow read if the user is authenticated and the path matches their userId
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow write (upload/delete) if the user is authenticated and the path matches their userId
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
